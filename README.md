@@ -28,7 +28,7 @@ This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/P
 
 ### Importing the Dashboard
 1. Ensure that your PeaNUT instance is correctly communicating with your InfluxDB database.  For more information on that, see [here](https://github.com/Brandawg93/PeaNUT/wiki/YAML-Configuration).
-2. Download the [dashboard JSON file](https://github.com/zephyr325/Grafana-for-PeaNUT/blob/main/dashboard/PeaNUT%20Grafana.json).
+2. Download the [dashboard JSON file](https://github.com/zephyr325/Grafana-for-PeaNUT/archive/refs/tags/v1.0.0.zip).
 3. In your Grafana instance, go to Dashboards and click on the "^" character in the "New" button.  This will give you the ability to import a JSON file.
 4. Use the "Upload dashboard JSON file" box to select the dashboard file, and click "Load"
 5. Select your InfluxDB database, and click "Import"
