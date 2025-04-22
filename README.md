@@ -1,7 +1,7 @@
 # Grafana-for-PeaNUT
 This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/PeaNUT) native capability to push UPS statistics to an InfluxDB v 2.x database while providing functioning panels to create your own personal dashboard.  
 
-
+![](/images/peanut_grafana_main.png)
 
 ## Features
 
@@ -14,8 +14,14 @@ This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/P
 * Queries have been optimized to reduce load/refresh times, and uses template variables for static or rarely-changing values
 * PeaNUT is based on the industry-standard [Network UPS Tools (NUT)](https://networkupstools.org/) - all database fields reflect that standard 
 
-
-
+### Pre-Built Panels
+![](/images/power_costs_only.png)
+![](/images/power_consumption_only.png)
+![](/images/power_consumption_and_cost_style_1.png)
+![](/images/power_consumption_and_cost_style_2.png)
+![](/images/ups_operations.png)
+![](/images/miscellaneous.png)
+![](/images/all_fields_last_value.png)
 
 ## Usage
 
@@ -39,4 +45,4 @@ Dashboards tend to be driven by your personal preferences of both functionality 
 ## Acknowledgements & Other Info
 This dashboard was conceptualized and based on the hours of work by [gilbn](https://grafana.com/grafana/dashboards/10914-unraid-nut-ups-dashboard-tr/) and [artstar](https://grafana.com/grafana/dashboards/15010-apc-ups-detailed-summary/).  Many thanks for that time and effort!
 
-Grafana is not currently allowing dashboards on their public sharing site that include template variables (?!?); but that policy is apparently under consideration.  This will be shared there if/when they change that policy.
+Grafana is not currently allowing dashboards on their public sharing site that include template variables (?!?) but that policy is apparently under consideration.  This will be shared there if/when they change that policy.
