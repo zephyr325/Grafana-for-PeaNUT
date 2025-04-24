@@ -44,5 +44,3 @@ Dashboards tend to be driven by your personal preferences of both functionality 
 
 ## Acknowledgements & Other Info
 This dashboard was conceptualized and based on the hours of work by [gilbn](https://grafana.com/grafana/dashboards/10914-unraid-nut-ups-dashboard-tr/) and [artstar](https://grafana.com/grafana/dashboards/15010-apc-ups-detailed-summary/).  Many thanks for that time and effort!
-
-Grafana is not currently allowing dashboards on their public sharing site that include template variables (?!?) but that policy is apparently under consideration.  This will be shared there if/when they change that policy.
