@@ -1,71 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_INFLUXDB",
-      "label": "influxdb",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "influxdb",
-      "pluginName": "InfluxDB"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "panel",
-      "id": "barchart",
-      "name": "Bar chart",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "gauge",
-      "name": "Gauge",
-      "version": ""
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "11.6.0"
-    },
-    {
-      "type": "datasource",
-      "id": "influxdb",
-      "name": "InfluxDB",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "status-history",
-      "name": "Status history",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "text",
-      "name": "Text",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -85,14 +18,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 32,
   "links": [],
   "liveNow": true,
   "panels": [
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "description": "UPS Load % (as reported by the UPS); Output wattage uses directly reported amount if available (Measured), otherwise calculates wattage from % Load and ups.realpower.nominal (Calculated)",
       "fieldConfig": {
@@ -274,7 +207,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "query": "// 1. Power calculation logic (uses override_output_measure variable)\npower_data = if \"${override_output_measure}\" == \"ups.realpower\" then (\n    // Use measured real power\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.realpower\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: r._value,\n        _field: \"Measured Output\",\n        unit: \"W\"\n      }))\n) else (\n    // Calculate real power from load percent\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: float(v: \"${nominal_power_watts}\") * (float(v: r._value) / 100.0),\n        _field: \"Calculated Output\",\n        unit: \"W\"\n      }))\n)\n\n// 2. Load percentage series\nload_data =\n    from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n    )\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> map(fn: (r) => ({\n        r with\n        _field: \"UPS Load\",\n        unit: \"%\"\n    }))\n\n// 3. Combined output\nunion(tables: [power_data, load_data])\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\"])\n  |> yield()",
           "refId": "A"
@@ -286,14 +219,32 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "OB DISCHRG": {
+                  "color": "dark-red",
+                  "index": 2
+                },
+                "ONLINE": {
+                  "color": "dark-green",
+                  "index": 1
+                },
+                "ONLINE CHARGING": {
+                  "color": "dark-green",
+                  "index": 0
+                }
+              },
+              "type": "value"
+            }
+          ],
           "max": 100,
           "min": 0,
           "thresholds": {
@@ -352,7 +303,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
+        "w": 6,
         "x": 14,
         "y": 0
       },
@@ -379,7 +330,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"ups.status\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> last()\n  |> yield(name: \"last\")",
           "refId": "A"
@@ -404,80 +355,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "dark-red"
-              },
-              {
-                "color": "dark-red",
-                "value": 0
-              },
-              {
-                "color": "#EAB839",
-                "value": 10
-              },
-              {
-                "color": "dark-green",
-                "value": 20
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 18,
-        "y": 0
-      },
-      "id": 6,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.runtime\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
-          "refId": "A"
-        }
-      ],
-      "title": "Battery Runtime",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
@@ -511,8 +389,8 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 3,
-        "x": 21,
+        "w": 4,
+        "x": 20,
         "y": 0
       },
       "id": 4,
@@ -536,7 +414,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.charge\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
           "refId": "A"
@@ -548,7 +426,204 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-blue",
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 14,
+        "y": 3
+      },
+      "id": 63,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "query": "load_data =\n    from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n    )\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> map(fn: (r) => ({\n        r with\n        _field: \"UPS Load\",\n        unit: \"%\"\n    }))\n\nload_data\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\"])\n  |> yield()",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Load",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "behr9p073lybkb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 16,
+        "y": 3
+      },
+      "id": 68,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "query": "power_data = if \"${override_output_measure}\" == \"ups.realpower\" then (\n    // Use measured real power\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.realpower\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: r._value,\n        _field: \"Measured Output\",\n        unit: \"W\"\n      }))\n) else (\n    // Calculate real power from load percent\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: float(v: \"${nominal_power_watts}\") * (float(v: r._value) / 100.0),\n        _field: \"Calculated Output\",\n        unit: \"W\"\n      }))\n)\n\npower_data\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\"])\n  |> yield()",
+          "refId": "A"
+        }
+      ],
+      "title": "Power Output",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "behr9p073lybkb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red"
+              },
+              {
+                "color": "dark-red",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 10
+              },
+              {
+                "color": "dark-green",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 18,
+        "y": 3
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.runtime\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Runtime",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
@@ -596,9 +671,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 7,
-        "x": 14,
-        "y": 3
+        "w": 6,
+        "x": 18,
+        "y": 6
       },
       "hideTimeOverride": true,
       "id": 34,
@@ -620,12 +695,12 @@
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\noption location = timezone.location(name: \"${__timezone}\")\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    r._field == \"ups.status\" and\n    r._value == \"OB DISCHRG\"\n  )\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"_value\"])\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    _value: r._value,\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\nfirst = base\n  |> first()\n  |> map(fn: (r) => ({\n    _time: r._time,\n    _value: r._value,\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end\n    })\n  )\n  |> map(fn: (r) => ({\n    day: date.truncate(t: r.event_start, unit: 1d, location: location),\n    event_start: r.event_start,\n    event_end: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns)),\n    duration: uint(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    )\n  }))\n  |> group()\n\ndays = union(tables: [\n  event_agg,\n  array.from(rows: [\n    {day: date.truncate(t: now_local, unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - one_day_ns), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 2))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 3))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 4))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 5))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)}\n  ])\n])\n\nclean = days\n  |> drop(columns: [\"event_start\", \"event_end\"])\n\nwith_counts = clean\n  |> group(columns: [\"day\"])\n  |> map(fn: (r) => ({\n      day: r.day,\n      duration: r.duration,\n      is_real: if r.duration > 0 then 1 else 0\n  }))\n  |> group(columns: [\"day\"])\n  |> reduce(\n      identity: { day: time(v: 0), count: 0, has_real: false },\n      fn: (r, accumulator) => ({\n          day: r.day,\n          count: if r.duration > 0 then accumulator.count + 1 else accumulator.count,\n          has_real: accumulator.has_real or (r.duration > 0)\n      })\n  )\n  |> map(fn: (r) => ({\n      day: r.day,\n      count: if r.has_real then r.count else 0 // If no real outages, 0\n  }))\n  |> sort(columns:[\"day\"])\n  |> group()  // <--- Group ALL into one table\nwith_counts\n  |> yield(name: \"OB_Discharge_Daily_Counts\")",
-          "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          }
+            "uid": "behr9p073lybkb"
+          },
+          "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\noption location = timezone.location(name: \"${__timezone}\")\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    r._field == \"ups.status\" and\n    r._value == \"OB DISCHRG\"\n  )\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"_value\"])\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    _value: r._value,\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\nfirst = base\n  |> first()\n  |> map(fn: (r) => ({\n    _time: r._time,\n    _value: r._value,\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end\n    })\n  )\n  |> map(fn: (r) => ({\n    day: date.truncate(t: r.event_start, unit: 1d, location: location),\n    event_start: r.event_start,\n    event_end: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns)),\n    duration: uint(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    )\n  }))\n  |> group()\n\ndays = union(tables: [\n  event_agg,\n  array.from(rows: [\n    {day: date.truncate(t: now_local, unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - one_day_ns), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 2))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 3))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 4))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 5))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)}\n  ])\n])\n\nclean = days\n  |> drop(columns: [\"event_start\", \"event_end\"])\n\nwith_counts = clean\n  |> group(columns: [\"day\"])\n  |> map(fn: (r) => ({\n      day: r.day,\n      duration: r.duration,\n      is_real: if r.duration > 0 then 1 else 0\n  }))\n  |> group(columns: [\"day\"])\n  |> reduce(\n      identity: { day: time(v: 0), count: 0, has_real: false },\n      fn: (r, accumulator) => ({\n          day: r.day,\n          count: if r.duration > 0 then accumulator.count + 1 else accumulator.count,\n          has_real: accumulator.has_real or (r.duration > 0)\n      })\n  )\n  |> map(fn: (r) => ({\n      day: r.day,\n      count: if r.has_real then r.count else 0 // If no real outages, 0\n  }))\n  |> sort(columns:[\"day\"])\n  |> group()  // <--- Group ALL into one table\nwith_counts\n  |> yield(name: \"OB_Discharge_Daily_Counts\")",
+          "refId": "A"
         }
       ],
       "timeFrom": "now-7d",
@@ -635,7 +710,296 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red"
+              },
+              {
+                "color": "dark-green",
+                "value": 110
+              },
+              {
+                "color": "dark-red",
+                "value": 130
+              }
+            ]
+          },
+          "unit": "volt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 2,
+        "x": 14,
+        "y": 7
+      },
+      "id": 65,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"input.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Input Voltage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "behr9p073lybkb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red"
+              },
+              {
+                "color": "dark-green",
+                "value": 110
+              },
+              {
+                "color": "dark-red",
+                "value": 130
+              }
+            ]
+          },
+          "unit": "volt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 2,
+        "x": 16,
+        "y": 7
+      },
+      "id": 64,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Voltage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "behr9p073lybkb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "volt"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nominal Battery Voltage"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    3,
+                    5
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-purple",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": " Battery Voltage"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 30
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 14,
+        "x": 0,
+        "y": 8
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "maxHeight": 600,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.voltage\" or r[\"_field\"] == \"battery.voltage.nominal\" or r[\"_field\"] == \"output.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Voltage",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "(battery\\.voltage\\.nominal.*)",
+            "renamePattern": "Nominal Battery Voltage"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "(battery\\.voltage.*)",
+            "renamePattern": " Battery Voltage"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
@@ -646,11 +1010,12 @@
             "align": "center",
             "cellOptions": {
               "type": "auto",
-              "wrapText": false
+              "wrapText": true
             },
             "inspect": false
           },
           "mappings": [],
+          "noValue": "(No Outages in Last 7 Days)",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -664,41 +1029,13 @@
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "combined"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "pattern": ".*null.*",
-                      "result": {
-                        "color": "#37872D",
-                        "index": 0,
-                        "text": "(None in Measurement Window)"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ]
-              },
-              {
-                "id": "color"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 2,
-        "w": 10,
-        "x": 14,
-        "y": 6
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 9
       },
       "hideTimeOverride": true,
       "id": 32,
@@ -719,13 +1056,14 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
-          "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last Outage: \",\n    string2: \", Duration (\",\n    string3: \" seconds), Reason: \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
+          "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last Outage: \",\n    string2: \" (\",\n    string3: \" seconds), Reason: \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
           "refId": "A"
         }
       ],
-      "timeFrom": "now-30d",
+      "timeFrom": "now-8d",
+      "title": "",
       "transformations": [
         {
           "id": "convertFieldType",
@@ -839,6 +1177,7 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "final_text",
             "binary": {
               "left": {
                 "matcher": {
@@ -859,6 +1198,18 @@
             },
             "replaceFields": true
           }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "string",
+                "targetField": "final_text"
+              }
+            ],
+            "fields": {}
+          }
         }
       ],
       "type": "table"
@@ -866,141 +1217,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
-          "unit": "volt"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Nominal Battery Voltage"
-            },
-            "properties": [
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    3,
-                    5
-                  ],
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-purple",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 14,
-        "x": 0,
-        "y": 8
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "maxHeight": 600,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.voltage\" or r[\"_field\"] == \"battery.voltage.nominal\" or r[\"_field\"] == \"output.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
-          "refId": "A"
-        }
-      ],
-      "title": "Battery Voltage",
-      "transformations": [
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "(battery\\.voltage\\.nominal.*)",
-            "renamePattern": "Nominal Battery Voltage"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "(battery\\.voltage.*)",
-            "renamePattern": " Battery Voltage"
-          }
-        }
-      ],
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "description": "This is a much more finely-tuned representation of the power output and cost/hour rate as compared to the week/month/annual view - the summary integral aggregations are by the minute rather than by the hour.  Care should be taken using the query window (set in the Relative Time Query options) using more than 2 days.",
       "fieldConfig": {
@@ -1133,7 +1350,7 @@
         "h": 7,
         "w": 10,
         "x": 14,
-        "y": 8
+        "y": 12
       },
       "id": 44,
       "options": {
@@ -1158,22 +1375,21 @@
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "query": "import \"timezone\"\noption location = timezone.location(name: \"$__timezone\")\n\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n      _time: r._time,\n      _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n)\n\ncost_series = energy_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\nenergy_series |> yield(name: \"kWh_hourly\")\ncost_series  |> yield(name: \"cost_hourly\")",
-          "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          }
+            "uid": "behr9p073lybkb"
+          },
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"$__timezone\")\n\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n      _time: r._time,\n      _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n)\n\ncost_series = energy_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\nenergy_series |> yield(name: \"kWh_hourly\")\ncost_series  |> yield(name: \"cost_hourly\")",
+          "refId": "A"
         }
       ],
-      "timeFrom": "now-2d",
       "title": "Real-Time Power Usage & Cost",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
@@ -1190,7 +1406,7 @@
             "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -1198,7 +1414,7 @@
             },
             "insertNulls": 10000,
             "lineInterpolation": "smooth",
-            "lineWidth": 2,
+            "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -1215,8 +1431,6 @@
           },
           "decimals": 0,
           "mappings": [],
-          "max": 135,
-          "min": 105,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1250,6 +1464,10 @@
                   "fixedColor": "dark-red",
                   "mode": "fixed"
                 }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
               }
             ]
           },
@@ -1265,6 +1483,14 @@
                   "fixedColor": "#00fade",
                   "mode": "fixed"
                 }
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "opacity"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 82
               }
             ]
           }
@@ -1296,7 +1522,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"input.voltage\" or r[\"_field\"] == \"input.voltage.nominal\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
           "refId": "A"
@@ -1331,7 +1557,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
@@ -1444,7 +1670,7 @@
         "h": 7,
         "w": 10,
         "x": 14,
-        "y": 15
+        "y": 19
       },
       "id": 57,
       "options": {
@@ -1481,7 +1707,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "query": "import \"date\"\nimport \"experimental\"\nimport \"timezone\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\nnow_local = date.truncate(t: now(), unit: 1d)\nstart_7d = date.add(d: -7d, to: now_local)\nstart_8d = date.add(d: -8d, to: now_local)\n\n// Generate 7 day buckets, starting from 7 days ago up to yesterday\nday_buckets = array.from(rows: [\n  { _time: start_7d },\n  { _time: date.add(d: 1d, to: start_7d) },\n  { _time: date.add(d: 2d, to: start_7d) },\n  { _time: date.add(d: 3d, to: start_7d) },\n  { _time: date.add(d: 4d, to: start_7d) },\n  { _time: date.add(d: 5d, to: start_7d) },\n  { _time: date.add(d: 6d, to: start_7d) },\n])\n\n// Get the right data source for output power\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join onto days: Set NaN for missing days\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Compute cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
           "refId": "A"
@@ -1491,19 +1717,44 @@
       "type": "barchart"
     },
     {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 14,
+        "x": 0,
+        "y": 22
+      },
+      "id": 66,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<p style=\"text-align: center;\">${model_info}</p> ",
+        "mode": "html"
+      },
+      "pluginVersion": "11.6.0",
+      "title": "",
+      "type": "text"
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 26
       },
       "id": 48,
       "panels": [
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -1654,7 +1905,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nfirst_day_this_month = date.truncate(t: now_local, unit: 1mo)\n\n// Generate up to 31 possible days for this month\nday_buckets = array.from(rows: [\n  { _time: first_day_this_month },\n  { _time: date.add(d: 1d, to: first_day_this_month) },\n  { _time: date.add(d: 2d, to: first_day_this_month) },\n  { _time: date.add(d: 3d, to: first_day_this_month) },\n  { _time: date.add(d: 4d, to: first_day_this_month) },\n  { _time: date.add(d: 5d, to: first_day_this_month) },\n  { _time: date.add(d: 6d, to: first_day_this_month) },\n  { _time: date.add(d: 7d, to: first_day_this_month) },\n  { _time: date.add(d: 8d, to: first_day_this_month) },\n  { _time: date.add(d: 9d, to: first_day_this_month) },\n  { _time: date.add(d: 10d, to: first_day_this_month) },\n  { _time: date.add(d: 11d, to: first_day_this_month) },\n  { _time: date.add(d: 12d, to: first_day_this_month) },\n  { _time: date.add(d: 13d, to: first_day_this_month) },\n  { _time: date.add(d: 14d, to: first_day_this_month) },\n  { _time: date.add(d: 15d, to: first_day_this_month) },\n  { _time: date.add(d: 16d, to: first_day_this_month) },\n  { _time: date.add(d: 17d, to: first_day_this_month) },\n  { _time: date.add(d: 18d, to: first_day_this_month) },\n  { _time: date.add(d: 19d, to: first_day_this_month) },\n  { _time: date.add(d: 20d, to: first_day_this_month) },\n  { _time: date.add(d: 21d, to: first_day_this_month) },\n  { _time: date.add(d: 22d, to: first_day_this_month) },\n  { _time: date.add(d: 23d, to: first_day_this_month) },\n  { _time: date.add(d: 24d, to: first_day_this_month) },\n  { _time: date.add(d: 25d, to: first_day_this_month) },\n  { _time: date.add(d: 26d, to: first_day_this_month) },\n  { _time: date.add(d: 27d, to: first_day_this_month) },\n  { _time: date.add(d: 28d, to: first_day_this_month) },\n  { _time: date.add(d: 29d, to: first_day_this_month) },\n  { _time: date.add(d: 30d, to: first_day_this_month) }\n])\n\n// Calculate daily kWh (for this month, excluding today)\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy to day_buckets, set NaN for days with no data\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n|> filter(fn: (r) => r._time < now_local)  // only include days before today\n|> filter(fn: (r) => r._time >= first_day_this_month and r._time < now_local) // in current month\n// Step 4: Calculate daily cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -1680,7 +1931,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -1830,7 +2081,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"experimental\"\nimport \"timezone\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\nnow_local = date.truncate(t: now(), unit: 1d)\nstart_7d = date.add(d: -7d, to: now_local)\nstart_8d = date.add(d: -8d, to: now_local)\n\n// Generate 7 day buckets, starting from 7 days ago up to yesterday\nday_buckets = array.from(rows: [\n  { _time: start_7d },\n  { _time: date.add(d: 1d, to: start_7d) },\n  { _time: date.add(d: 2d, to: start_7d) },\n  { _time: date.add(d: 3d, to: start_7d) },\n  { _time: date.add(d: 4d, to: start_7d) },\n  { _time: date.add(d: 5d, to: start_7d) },\n  { _time: date.add(d: 6d, to: start_7d) },\n])\n\n// Get the right data source for output power\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join onto days: Set NaN for missing days\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Compute cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -1855,7 +2106,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -1968,7 +2219,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 396
+            "y": 487
           },
           "hideTimeOverride": true,
           "id": 52,
@@ -2006,7 +2257,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nthis_month_start = date.truncate(t: now_local, unit: 1mo)\nstart = date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo)\n\n// Generate the first day of each of the last 12 months\ntime_buckets = array.from(rows: [\n  { _time: date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -10mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -9mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -8mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -7mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -6mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -5mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -4mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -3mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -2mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -1mo, to: this_month_start), unit: 1mo) },\n  { _time: this_month_start }\n])\n\n// Compute kWh per month with correct output measure\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h), \n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy data with all 12 buckets (to show months with no data as NaN)\nkWh_series = join.left(\n  left: time_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Calculate cost from kWh (also handles NaN)\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -2039,14 +2290,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 27
       },
       "id": 43,
       "panels": [
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -2197,7 +2448,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nfirst_day_this_month = date.truncate(t: now_local, unit: 1mo)\n\n// Generate up to 31 possible days for this month\nday_buckets = array.from(rows: [\n  { _time: first_day_this_month },\n  { _time: date.add(d: 1d, to: first_day_this_month) },\n  { _time: date.add(d: 2d, to: first_day_this_month) },\n  { _time: date.add(d: 3d, to: first_day_this_month) },\n  { _time: date.add(d: 4d, to: first_day_this_month) },\n  { _time: date.add(d: 5d, to: first_day_this_month) },\n  { _time: date.add(d: 6d, to: first_day_this_month) },\n  { _time: date.add(d: 7d, to: first_day_this_month) },\n  { _time: date.add(d: 8d, to: first_day_this_month) },\n  { _time: date.add(d: 9d, to: first_day_this_month) },\n  { _time: date.add(d: 10d, to: first_day_this_month) },\n  { _time: date.add(d: 11d, to: first_day_this_month) },\n  { _time: date.add(d: 12d, to: first_day_this_month) },\n  { _time: date.add(d: 13d, to: first_day_this_month) },\n  { _time: date.add(d: 14d, to: first_day_this_month) },\n  { _time: date.add(d: 15d, to: first_day_this_month) },\n  { _time: date.add(d: 16d, to: first_day_this_month) },\n  { _time: date.add(d: 17d, to: first_day_this_month) },\n  { _time: date.add(d: 18d, to: first_day_this_month) },\n  { _time: date.add(d: 19d, to: first_day_this_month) },\n  { _time: date.add(d: 20d, to: first_day_this_month) },\n  { _time: date.add(d: 21d, to: first_day_this_month) },\n  { _time: date.add(d: 22d, to: first_day_this_month) },\n  { _time: date.add(d: 23d, to: first_day_this_month) },\n  { _time: date.add(d: 24d, to: first_day_this_month) },\n  { _time: date.add(d: 25d, to: first_day_this_month) },\n  { _time: date.add(d: 26d, to: first_day_this_month) },\n  { _time: date.add(d: 27d, to: first_day_this_month) },\n  { _time: date.add(d: 28d, to: first_day_this_month) },\n  { _time: date.add(d: 29d, to: first_day_this_month) },\n  { _time: date.add(d: 30d, to: first_day_this_month) }\n])\n\n// Calculate daily kWh (for this month, excluding today)\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy to day_buckets, set NaN for days with no data\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n|> filter(fn: (r) => r._time < now_local)  // only include days before today\n|> filter(fn: (r) => r._time >= first_day_this_month and r._time < now_local) // in current month\n// Step 4: Calculate daily cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -2223,7 +2474,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -2373,7 +2624,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"experimental\"\nimport \"timezone\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\nnow_local = date.truncate(t: now(), unit: 1d)\nstart_7d = date.add(d: -7d, to: now_local)\nstart_8d = date.add(d: -8d, to: now_local)\n\n// Generate 7 day buckets, starting from 7 days ago up to yesterday\nday_buckets = array.from(rows: [\n  { _time: start_7d },\n  { _time: date.add(d: 1d, to: start_7d) },\n  { _time: date.add(d: 2d, to: start_7d) },\n  { _time: date.add(d: 3d, to: start_7d) },\n  { _time: date.add(d: 4d, to: start_7d) },\n  { _time: date.add(d: 5d, to: start_7d) },\n  { _time: date.add(d: 6d, to: start_7d) },\n])\n\n// Get the right data source for output power\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join onto days: Set NaN for missing days\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Compute cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -2398,7 +2649,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -2511,7 +2762,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 282
+            "y": 373
           },
           "hideTimeOverride": true,
           "id": 41,
@@ -2549,7 +2800,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nthis_month_start = date.truncate(t: now_local, unit: 1mo)\nstart = date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo)\n\n// Generate the first day of each of the last 12 months\ntime_buckets = array.from(rows: [\n  { _time: date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -10mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -9mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -8mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -7mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -6mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -5mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -4mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -3mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -2mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -1mo, to: this_month_start), unit: 1mo) },\n  { _time: this_month_start }\n])\n\n// Compute kWh per month with correct output measure\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h), \n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy data with all 12 buckets (to show months with no data as NaN)\nkWh_series = join.left(\n  left: time_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Calculate cost from kWh (also handles NaN)\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -2582,14 +2833,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 28
       },
       "id": 28,
       "panels": [
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -2740,7 +2991,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nfirst_day_this_month = date.truncate(t: now_local, unit: 1mo)\n\n// Generate up to 31 possible days for this month\nday_buckets = array.from(rows: [\n  { _time: first_day_this_month },\n  { _time: date.add(d: 1d, to: first_day_this_month) },\n  { _time: date.add(d: 2d, to: first_day_this_month) },\n  { _time: date.add(d: 3d, to: first_day_this_month) },\n  { _time: date.add(d: 4d, to: first_day_this_month) },\n  { _time: date.add(d: 5d, to: first_day_this_month) },\n  { _time: date.add(d: 6d, to: first_day_this_month) },\n  { _time: date.add(d: 7d, to: first_day_this_month) },\n  { _time: date.add(d: 8d, to: first_day_this_month) },\n  { _time: date.add(d: 9d, to: first_day_this_month) },\n  { _time: date.add(d: 10d, to: first_day_this_month) },\n  { _time: date.add(d: 11d, to: first_day_this_month) },\n  { _time: date.add(d: 12d, to: first_day_this_month) },\n  { _time: date.add(d: 13d, to: first_day_this_month) },\n  { _time: date.add(d: 14d, to: first_day_this_month) },\n  { _time: date.add(d: 15d, to: first_day_this_month) },\n  { _time: date.add(d: 16d, to: first_day_this_month) },\n  { _time: date.add(d: 17d, to: first_day_this_month) },\n  { _time: date.add(d: 18d, to: first_day_this_month) },\n  { _time: date.add(d: 19d, to: first_day_this_month) },\n  { _time: date.add(d: 20d, to: first_day_this_month) },\n  { _time: date.add(d: 21d, to: first_day_this_month) },\n  { _time: date.add(d: 22d, to: first_day_this_month) },\n  { _time: date.add(d: 23d, to: first_day_this_month) },\n  { _time: date.add(d: 24d, to: first_day_this_month) },\n  { _time: date.add(d: 25d, to: first_day_this_month) },\n  { _time: date.add(d: 26d, to: first_day_this_month) },\n  { _time: date.add(d: 27d, to: first_day_this_month) },\n  { _time: date.add(d: 28d, to: first_day_this_month) },\n  { _time: date.add(d: 29d, to: first_day_this_month) },\n  { _time: date.add(d: 30d, to: first_day_this_month) }\n])\n\n// Calculate daily kWh (for this month, excluding today)\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy to day_buckets, set NaN for days with no data\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n|> filter(fn: (r) => r._time < now_local)  // only include days before today\n|> filter(fn: (r) => r._time >= first_day_this_month and r._time < now_local) // in current month\n// Step 4: Calculate daily cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -2753,7 +3004,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -2903,7 +3154,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"experimental\"\nimport \"timezone\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\nnow_local = date.truncate(t: now(), unit: 1d)\nstart_7d = date.add(d: -7d, to: now_local)\nstart_8d = date.add(d: -8d, to: now_local)\n\n// Generate 7 day buckets, starting from 7 days ago up to yesterday\nday_buckets = array.from(rows: [\n  { _time: start_7d },\n  { _time: date.add(d: 1d, to: start_7d) },\n  { _time: date.add(d: 2d, to: start_7d) },\n  { _time: date.add(d: 3d, to: start_7d) },\n  { _time: date.add(d: 4d, to: start_7d) },\n  { _time: date.add(d: 5d, to: start_7d) },\n  { _time: date.add(d: 6d, to: start_7d) },\n])\n\n// Get the right data source for output power\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join onto days: Set NaN for missing days\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Compute cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -2915,7 +3166,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -3028,7 +3279,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 196
+            "y": 287
           },
           "hideTimeOverride": true,
           "id": 37,
@@ -3066,7 +3317,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nthis_month_start = date.truncate(t: now_local, unit: 1mo)\nstart = date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo)\n\n// Generate the first day of each of the last 12 months\ntime_buckets = array.from(rows: [\n  { _time: date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -10mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -9mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -8mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -7mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -6mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -5mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -4mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -3mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -2mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -1mo, to: this_month_start), unit: 1mo) },\n  { _time: this_month_start }\n])\n\n// Compute kWh per month with correct output measure\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h), \n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy data with all 12 buckets (to show months with no data as NaN)\nkWh_series = join.left(\n  left: time_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Calculate cost from kWh (also handles NaN)\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -3086,14 +3337,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 29
       },
       "id": 38,
       "panels": [
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -3238,7 +3489,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nfirst_day_this_month = date.truncate(t: now_local, unit: 1mo)\n\n// Generate up to 31 possible days for this month\nday_buckets = array.from(rows: [\n  { _time: first_day_this_month },\n  { _time: date.add(d: 1d, to: first_day_this_month) },\n  { _time: date.add(d: 2d, to: first_day_this_month) },\n  { _time: date.add(d: 3d, to: first_day_this_month) },\n  { _time: date.add(d: 4d, to: first_day_this_month) },\n  { _time: date.add(d: 5d, to: first_day_this_month) },\n  { _time: date.add(d: 6d, to: first_day_this_month) },\n  { _time: date.add(d: 7d, to: first_day_this_month) },\n  { _time: date.add(d: 8d, to: first_day_this_month) },\n  { _time: date.add(d: 9d, to: first_day_this_month) },\n  { _time: date.add(d: 10d, to: first_day_this_month) },\n  { _time: date.add(d: 11d, to: first_day_this_month) },\n  { _time: date.add(d: 12d, to: first_day_this_month) },\n  { _time: date.add(d: 13d, to: first_day_this_month) },\n  { _time: date.add(d: 14d, to: first_day_this_month) },\n  { _time: date.add(d: 15d, to: first_day_this_month) },\n  { _time: date.add(d: 16d, to: first_day_this_month) },\n  { _time: date.add(d: 17d, to: first_day_this_month) },\n  { _time: date.add(d: 18d, to: first_day_this_month) },\n  { _time: date.add(d: 19d, to: first_day_this_month) },\n  { _time: date.add(d: 20d, to: first_day_this_month) },\n  { _time: date.add(d: 21d, to: first_day_this_month) },\n  { _time: date.add(d: 22d, to: first_day_this_month) },\n  { _time: date.add(d: 23d, to: first_day_this_month) },\n  { _time: date.add(d: 24d, to: first_day_this_month) },\n  { _time: date.add(d: 25d, to: first_day_this_month) },\n  { _time: date.add(d: 26d, to: first_day_this_month) },\n  { _time: date.add(d: 27d, to: first_day_this_month) },\n  { _time: date.add(d: 28d, to: first_day_this_month) },\n  { _time: date.add(d: 29d, to: first_day_this_month) },\n  { _time: date.add(d: 30d, to: first_day_this_month) }\n])\n\n// Calculate daily kWh (for this month, excluding today)\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: first_day_this_month, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    // Set _time to the **start** of the window\n    |> map(fn: (r) => ({\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy to day_buckets, set NaN for days with no data\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n|> filter(fn: (r) => r._time < now_local)  // only include days before today\n|> filter(fn: (r) => r._time >= first_day_this_month and r._time < now_local) // in current month\n// Step 4: Calculate daily cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -3251,7 +3502,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -3404,7 +3655,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"experimental\"\nimport \"timezone\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\nnow_local = date.truncate(t: now(), unit: 1d)\nstart_7d = date.add(d: -7d, to: now_local)\nstart_8d = date.add(d: -8d, to: now_local)\n\n// Generate 7 day buckets, starting from 7 days ago up to yesterday\nday_buckets = array.from(rows: [\n  { _time: start_7d },\n  { _time: date.add(d: 1d, to: start_7d) },\n  { _time: date.add(d: 2d, to: start_7d) },\n  { _time: date.add(d: 3d, to: start_7d) },\n  { _time: date.add(d: 4d, to: start_7d) },\n  { _time: date.add(d: 5d, to: start_7d) },\n  { _time: date.add(d: 6d, to: start_7d) },\n])\n\n// Get the right data source for output power\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start_8d, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false,\n          location: location\n       )\n    |> aggregateWindow(\n          every: 1d,\n          fn: sum,\n          createEmpty: false,\n          location: location\n       )\n    |> map(fn: (r) => ({\n        // _time is end of window: shift -1d to represent start of day\n        _time: date.add(d: -1d, to: date.truncate(t: r._time, unit: 1d)),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join onto days: Set NaN for missing days\nkWh_series = join.left(\n  left: day_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Compute cost\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -3417,7 +3668,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -3538,7 +3789,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 110
+            "y": 201
           },
           "hideTimeOverride": true,
           "id": 29,
@@ -3566,7 +3817,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\nimport \"join\"\n\noption location = timezone.location(name: \"$__timezone\")\n\nnow_local = date.truncate(t: now(), unit: 1d)\nthis_month_start = date.truncate(t: now_local, unit: 1mo)\nstart = date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo)\n\n// Generate the first day of each of the last 12 months\ntime_buckets = array.from(rows: [\n  { _time: date.truncate(t: experimental.addDuration(d: -11mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -10mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -9mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -8mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -7mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -6mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -5mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -4mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -3mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -2mo, to: this_month_start), unit: 1mo) },\n  { _time: date.truncate(t: experimental.addDuration(d: -1mo, to: this_month_start), unit: 1mo) },\n  { _time: this_month_start }\n])\n\n// Compute kWh per month with correct output measure\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h), \n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: start, stop: now_local)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n        _time: r._time,\n        _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n          every: 1h,\n          fn: (tables=<-, column) => tables |> integral(unit: 1h),\n          createEmpty: false\n       )\n    |> aggregateWindow(\n          every: 1mo,\n          fn: sum,\n          createEmpty: false\n       )\n    |> map(fn: (r) => ({\n        _time: date.truncate(t: r._time, unit: 1mo),\n        kWh: r._value / 1000.0\n    }))\n    |> keep(columns: [\"_time\", \"kWh\"])\n)\n\n// Left join energy data with all 12 buckets (to show months with no data as NaN)\nkWh_series = join.left(\n  left: time_buckets,\n  right: energy_series,\n  on: (l, r) => l._time == r._time,\n  as: (l, r) => ({\n    _time: l._time,\n    kWh: if exists r.kWh then r.kWh else float(v: \"NaN\")\n  })\n)\n\n// Calculate cost from kWh (also handles NaN)\ncost_series = kWh_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\n// Output for Grafana\nkWh_series  |> yield(name: \"kWh\")\ncost_series |> yield(name: \"cost\")",
               "refId": "A"
@@ -3586,14 +3837,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 30
       },
       "id": 54,
       "panels": [
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -3677,7 +3928,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 27
+            "y": 30
           },
           "id": 55,
           "options": {
@@ -3699,7 +3950,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.voltage\" or r[\"_field\"] == \"battery.voltage.nominal\" or r[\"_field\"] == \"output.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
               "refId": "A"
@@ -3727,7 +3978,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "description": "UPS Load % (as reported by the UPS); Output wattage uses directly reported amount if available (Measured), otherwise calculates wattage from % Load and ups.realpower.nominal (Calculated)",
           "fieldConfig": {
@@ -3881,7 +4132,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 27
+            "y": 30
           },
           "id": 56,
           "options": {
@@ -3909,7 +4160,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "// 1. Power calculation logic (uses override_output_measure variable)\npower_data = if \"${override_output_measure}\" == \"ups.realpower\" then (\n    // Use measured real power\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.realpower\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: r._value,\n        _field: \"Measured Output\",\n        unit: \"W\"\n      }))\n) else (\n    // Calculate real power from load percent\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: float(v: \"${nominal_power_watts}\") * (float(v: r._value) / 100.0),\n        _field: \"Calculated Output\",\n        unit: \"W\"\n      }))\n)\n\n// 2. Load percentage series\nload_data =\n    from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n    )\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> map(fn: (r) => ({\n        r with\n        _field: \"UPS Load\",\n        unit: \"%\"\n    }))\n\n// 3. Combined output\nunion(tables: [power_data, load_data])\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\"])\n  |> yield()",
               "refId": "A"
@@ -3921,7 +4172,263 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "dark-blue",
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "dark-green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 2,
+            "x": 0,
+            "y": 44
+          },
+          "id": 67,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "11.6.0",
+          "targets": [
+            {
+              "query": "load_data =\n    from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n    )\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> map(fn: (r) => ({\n        r with\n        _field: \"UPS Load\",\n        unit: \"%\"\n    }))\n\nload_data\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\"])\n  |> yield()",
+              "refId": "A"
+            }
+          ],
+          "title": "Current Load",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "dark-green",
+                "mode": "fixed"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "watt"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 2,
+            "x": 2,
+            "y": 44
+          },
+          "id": 62,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "11.6.0",
+          "targets": [
+            {
+              "query": "power_data = if \"${override_output_measure}\" == \"ups.realpower\" then (\n    // Use measured real power\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.realpower\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: r._value,\n        _field: \"Measured Output\",\n        unit: \"W\"\n      }))\n) else (\n    // Calculate real power from load percent\n    from(bucket: \"${bucket}\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) =>\n        r._measurement == \"${device}\" and\n        r._field == \"ups.load\"\n      )\n      |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n      |> map(fn: (r) => ({\n        _time: r._time,\n        _value: float(v: \"${nominal_power_watts}\") * (float(v: r._value) / 100.0),\n        _field: \"Calculated Output\",\n        unit: \"W\"\n      }))\n)\n\npower_data\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\"])\n  |> yield()",
+              "refId": "A"
+            }
+          ],
+          "title": "Power Output",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "dark-green",
+                "mode": "fixed"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "dark-red"
+                  },
+                  {
+                    "color": "dark-green",
+                    "value": 110
+                  },
+                  {
+                    "color": "dark-red",
+                    "value": 130
+                  }
+                ]
+              },
+              "unit": "volt"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 2,
+            "x": 4,
+            "y": 44
+          },
+          "id": 69,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "11.6.0",
+          "targets": [
+            {
+              "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"input.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+              "refId": "A"
+            }
+          ],
+          "title": "Input Voltage",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "dark-green",
+                "mode": "fixed"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "dark-red"
+                  },
+                  {
+                    "color": "dark-green",
+                    "value": 110
+                  },
+                  {
+                    "color": "dark-red",
+                    "value": 130
+                  }
+                ]
+              },
+              "unit": "volt"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 2,
+            "x": 6,
+            "y": 44
+          },
+          "id": 70,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "11.6.0",
+          "targets": [
+            {
+              "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+              "refId": "A"
+            }
+          ],
+          "title": "Battery Voltage",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
           },
           "fieldConfig": {
             "defaults": {
@@ -3983,7 +4490,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 58
+            "y": 44
           },
           "id": 53,
           "options": {
@@ -4005,7 +4512,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+                "uid": "behr9p073lybkb"
               },
               "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"battery.charge\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
               "refId": "A"
@@ -4024,16 +4531,16 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 31
       },
       "id": 46,
       "panels": [
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
-          "description": "This is a much more finely-tuned representation of the power output and cost/hour rate as compared to the week/month/annual view - the summary integral aggregations are by the minute rather than by the hour.  Care should be taken using the query window (set in the Relative Time Query options) to more than 2 days of time.",
+          "description": "This is a much more finely-tuned representation of the power output and cost/hour rate as compared to the week/month/annual view - the summary integral aggregations are by the minute rather than by the hour.  Care should be taken using the query window (set in the Relative Time Query options) using more than 2 days.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4164,9 +4671,9 @@
             "h": 7,
             "w": 10,
             "x": 0,
-            "y": 28
+            "y": 32
           },
-          "id": 49,
+          "id": 58,
           "options": {
             "legend": {
               "calcs": [
@@ -4189,38 +4696,124 @@
           "pluginVersion": "11.6.0",
           "targets": [
             {
-              "query": "import \"timezone\"\noption location = timezone.location(name: \"$__timezone\")\n\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n      _time: r._time,\n      _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n)\n\ncost_series = energy_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\nenergy_series |> yield(name: \"kWh_hourly\")\ncost_series  |> yield(name: \"cost_hourly\")",
-              "refId": "A",
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-              }
+                "uid": "behr9p073lybkb"
+              },
+              "query": "import \"timezone\"\noption location = timezone.location(name: \"$__timezone\")\n\nenergy_series = if \"${override_output_measure}\" == \"ups.realpower\" then (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.realpower\")\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n) else (\n  from(bucket: \"${bucket}\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"${device}\" and r._field == \"ups.load\")\n    |> map(fn: (r) => ({\n      _time: r._time,\n      _value: (r._value / 100.0) * float(v: \"${nominal_power_watts:0.0}\")\n    }))\n    |> aggregateWindow(\n        every: 1m,\n        fn: (tables=<-, column) => tables |> integral(unit: 1m),\n        createEmpty: false,\n        location: location\n      )\n    |> map(fn: (r) => ({\n      _time: r._time,\n      kWh: r._value / 1000.0\n    }))\n)\n\ncost_series = energy_series\n  |> map(fn: (r) => ({\n    _time: r._time,\n    cost: r.kWh * float(v: \"${kWh_cost:0.0}\")\n  }))\n\nenergy_series |> yield(name: \"kWh_hourly\")\ncost_series  |> yield(name: \"cost_hourly\")",
+              "refId": "A"
             }
           ],
-          "timeFrom": "now-2d",
           "title": "Real-Time Power Usage & Cost",
           "type": "timeseries"
         },
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
-          "description": "All times UPS went into OB DISCHRG status.  This query's timeframe is set in the  \"Query Options\".",
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "thresholds"
               },
               "custom": {
-                "align": "left",
-                "cellOptions": {
-                  "type": "auto"
+                "axisPlacement": "auto",
+                "fillOpacity": 70,
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
                 },
-                "inspect": false,
-                "minWidth": 125
+                "lineWidth": 1
               },
               "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "count"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "."
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 3,
+            "w": 7,
+            "x": 17,
+            "y": 32
+          },
+          "hideTimeOverride": true,
+          "id": 60,
+          "options": {
+            "colWidth": 0.9,
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "rowHeight": 0.9,
+            "showValue": "auto",
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.6.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "behr9p073lybkb"
+              },
+              "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\nimport \"array\"\noption location = timezone.location(name: \"${__timezone}\")\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    r._field == \"ups.status\" and\n    r._value == \"OB DISCHRG\"\n  )\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"_value\"])\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    _value: r._value,\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\nfirst = base\n  |> first()\n  |> map(fn: (r) => ({\n    _time: r._time,\n    _value: r._value,\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end\n    })\n  )\n  |> map(fn: (r) => ({\n    day: date.truncate(t: r.event_start, unit: 1d, location: location),\n    event_start: r.event_start,\n    event_end: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns)),\n    duration: uint(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    )\n  }))\n  |> group()\n\ndays = union(tables: [\n  event_agg,\n  array.from(rows: [\n    {day: date.truncate(t: now_local, unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - one_day_ns), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 2))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 3))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 4))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 5))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)},\n    {day: date.truncate(t: time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))), unit: 1d, location: location), event_start: time(v: 0), event_end: time(v: 0), duration: uint(v: 0)}\n  ])\n])\n\nclean = days\n  |> drop(columns: [\"event_start\", \"event_end\"])\n\nwith_counts = clean\n  |> group(columns: [\"day\"])\n  |> map(fn: (r) => ({\n      day: r.day,\n      duration: r.duration,\n      is_real: if r.duration > 0 then 1 else 0\n  }))\n  |> group(columns: [\"day\"])\n  |> reduce(\n      identity: { day: time(v: 0), count: 0, has_real: false },\n      fn: (r, accumulator) => ({\n          day: r.day,\n          count: if r.duration > 0 then accumulator.count + 1 else accumulator.count,\n          has_real: accumulator.has_real or (r.duration > 0)\n      })\n  )\n  |> map(fn: (r) => ({\n      day: r.day,\n      count: if r.has_real then r.count else 0 // If no real outages, 0\n  }))\n  |> sort(columns:[\"day\"])\n  |> group()  // <--- Group ALL into one table\nwith_counts\n  |> yield(name: \"OB_Discharge_Daily_Counts\")",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": "now-7d",
+          "title": "Transitions to Battery (Last 7 Days)",
+          "type": "status-history"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "behr9p073lybkb"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "center",
+                "cellOptions": {
+                  "type": "auto",
+                  "wrapText": true
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "noValue": "(No Outages in Last 7 Days)",
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -4237,12 +4830,13 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 6,
-            "w": 14,
-            "x": 10,
-            "y": 28
+            "h": 3,
+            "w": 6,
+            "x": 18,
+            "y": 35
           },
-          "id": 47,
+          "hideTimeOverride": true,
+          "id": 71,
           "options": {
             "cellHeight": "sm",
             "footer": {
@@ -4253,55 +4847,166 @@
               ],
               "show": false
             },
-            "showHeader": true
+            "showHeader": false
           },
           "pluginVersion": "11.6.0",
           "targets": [
             {
-              "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\n\nbase = from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n|> reduce(\n  identity: {\n    event_start: time(v: uint(v: 9223372036854775807)),\n    event_end: time(v: 0),\n    transfer_reason: \"\",\n  },\n  fn: (r, accumulator) => ({\n    event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n    event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n    transfer_reason: if r._time < accumulator.event_start then r.reason else accumulator.transfer_reason\n  })\n)\n  |> map(fn: (r) => ({\n    day: date.truncate(t: r.event_start, unit: 1d, location: location),\n    event_start: r.event_start,\n    event_end: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns)),\n    duration: int(\n      v: (uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start))\n        / uint(v: 1000000000)\n    ),\n    transfer_reason: r.transfer_reason\n  }))\n\n|> yield(name: \"OB_Discharge_Outage_Events\")",
-              "refId": "A",
               "datasource": {
                 "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-              }
+                "uid": "behr9p073lybkb"
+              },
+              "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last Outage: \",\n    string2: \" (\",\n    string3: \" seconds), Reason: \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
+              "refId": "A"
             }
           ],
-          "timeFrom": "now-7d/d",
-          "title": "Battery Events",
+          "timeFrom": "now-8d",
+          "title": "",
           "transformations": [
             {
               "id": "convertFieldType",
               "options": {
                 "conversions": [
                   {
-                    "dateFormat": "YYYY-MM-DD",
+                    "dateFormat": "YYYY/MM/DD HH:MM:SS",
                     "destinationType": "string",
-                    "targetField": "day",
-                    "timezone": "browser"
+                    "targetField": "event_start"
                   }
                 ],
                 "fields": {}
               }
             },
             {
-              "id": "organize",
+              "id": "calculateField",
               "options": {
-                "excludeByName": {},
-                "includeByName": {},
-                "indexByName": {
-                  "day": 0,
-                  "duration": 3,
-                  "event_end": 2,
-                  "event_start": 1,
-                  "transfer_reason": 4
+                "alias": "combo1",
+                "binary": {
+                  "left": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "string1"
+                    }
+                  },
+                  "right": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "event_start"
+                    }
+                  }
                 },
-                "renameByName": {
-                  "day": "Outage Date",
-                  "duration": "Duration (Seconds)",
-                  "event_end": "End",
-                  "event_start": "Start",
-                  "transfer_reason": "Reason"
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
                 }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "combo2",
+                "binary": {
+                  "left": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "string2"
+                    }
+                  },
+                  "right": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "duration"
+                    }
+                  }
+                },
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "combo3",
+                "binary": {
+                  "left": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "string3"
+                    }
+                  },
+                  "right": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "transfer_reason"
+                    }
+                  }
+                },
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "combo4",
+                "binary": {
+                  "left": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "combo1"
+                    }
+                  },
+                  "right": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "combo2"
+                    }
+                  }
+                },
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "final_text",
+                "binary": {
+                  "left": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "combo4"
+                    }
+                  },
+                  "right": {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "combo3"
+                    }
+                  }
+                },
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                },
+                "replaceFields": true
+              }
+            },
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  {
+                    "destinationType": "string",
+                    "targetField": "final_text"
+                  }
+                ],
+                "fields": {}
               }
             }
           ],
@@ -4315,8 +5020,8 @@
           "gridPos": {
             "h": 2,
             "w": 10,
-            "x": 0,
-            "y": 35
+            "x": 14,
+            "y": 38
           },
           "id": 31,
           "options": {
@@ -4342,7 +5047,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 32
       },
       "id": 9,
       "panels": [],
@@ -4352,7 +5057,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "behr9p073lybkb"
       },
       "fieldConfig": {
         "defaults": {
@@ -4386,7 +5091,7 @@
         "h": 15,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 33
       },
       "id": 1,
       "options": {
@@ -4407,7 +5112,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "behr9p073lybkb"
           },
           "query": "from(bucket: \"${bucket}\")\n\t|> range(start: v.timeRangeStart, stop:v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${device}\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: string(v: r._value)}))\n  |> keep(columns: [\"_measurement\", \"_field\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -4436,6 +5141,7 @@
       "type": "table"
     }
   ],
+  "preload": false,
   "refresh": "auto",
   "schemaVersion": 41,
   "tags": [
@@ -4446,10 +5152,13 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "text": "ups-data",
+          "value": "ups-data"
+        },
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "behr9p073lybkb"
         },
         "definition": "buckets()",
         "description": "",
@@ -4465,10 +5174,13 @@
         "type": "query"
       },
       {
-        "current": {},
+        "current": {
+          "text": "zox1ups",
+          "value": "zox1ups"
+        },
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "behr9p073lybkb"
         },
         "definition": "import \"influxdata/influxdb/schema\"\nschema.measurements(bucket: \"${bucket}\")\n  |> map(fn: (r) => ({_value: r._value}))",
         "includeAll": false,
@@ -4501,7 +5213,10 @@
         "type": "textbox"
       },
       {
-        "current": {},
+        "current": {
+          "text": "900",
+          "value": "900"
+        },
         "definition": "fallback_val = from(bucket: \"${bucket}\")\n  |> range(start: -4h)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    r._field == \"ups.realpower.nominal\"\n  )\n  |> last()\n  |> findRecord(fn: (key) => true, idx: 0)\n\noverride_val = \"${override_ups_realpower}\"\n\nnominal = if override_val == \"\" then float(v: fallback_val._value) else float(v: override_val)\n\n// Wrap in dummy table for Grafana variable support\nfrom(bucket: \"${bucket}\")\n  |> range(start: -1m)\n  |> limit(n:1)\n  |> map(fn: (r) => ({ _value: nominal }))",
         "description": "The dashboard will attempt to use the ups.realpower.nominal field to set the UPS's maximum sustainable watts.  If you wish to override that value or it isn't present in the database, use the Override: Maximum Watts",
         "hide": 2,
@@ -4539,7 +5254,7 @@
           "value": "ups.load"
         },
         "description": "This dashboard defaults to using the (ups load * maximum output watts) method to determine output wattage as these metrics are usually available.  If the monitored UPS produces the ups.realpower metric (the actual monitored output wattage) that should be used as that is a more precise measurement.",
-        "label": "Override:  Maximum Watts",
+        "label": "Override:  Output Measure",
         "name": "override_output_measure",
         "options": [
           {
@@ -4557,7 +5272,10 @@
         "type": "custom"
       },
       {
-        "current": {},
+        "current": {
+          "text": "Manufacturer: American Power Conversion | Model: Back-UPS XS 1500M | Serial: 4B2205P06989",
+          "value": "Manufacturer: American Power Conversion | Model: Back-UPS XS 1500M | Serial: 4B2205P06989"
+        },
         "definition": "import \"array\"\nlastVals = from(bucket: \"${bucket}\")\n  |> range(start: -10m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"${device}\")\n  |> filter(fn: (r) => r[\"_field\"] == \"ups.mfr\" or r[\"_field\"] == \"ups.model\" or r[\"_field\"] == \"ups.serial\")\n  |> last()\n  |> keep(columns: [\"_field\", \"_value\"])\n\nmfr = lastVals |> filter(fn: (r) => r._field == \"ups.mfr\") |> findRecord(fn: (key) => true, idx: 0)\nmodel = lastVals |> filter(fn: (r) => r._field == \"ups.model\") |> findRecord(fn: (key) => true, idx: 0)\nserial = lastVals |> filter(fn: (r) => r._field == \"ups.serial\") |> findRecord(fn: (key) => true, idx: 0)\n\narray.from(rows: [\n  { Info: \n    \"Manufacturer: \" + string(v: mfr._value) \n    + \" | Model: \" + string(v: model._value)\n    + \" | Serial: \" + string(v: serial._value)\n  }\n])",
         "hide": 2,
         "name": "model_info",
@@ -4570,7 +5288,10 @@
         "type": "query"
       },
       {
-        "current": {},
+        "current": {
+          "text": "10",
+          "value": "10"
+        },
         "definition": "bucket = \"${bucket}\"\nmeasurement = \"${device}\"\nfield = \"ups.status\"\n\nfrom(bucket: bucket)\n  |> range(start: -1h)\n  |> filter(fn: (r) =>\n    r._measurement == measurement and\n    r._field == field\n  )\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1s)\n  |> keep(columns: [\"_time\", \"elapsed\"])\n  |> mean(column: \"elapsed\")\n  |> map(fn: (r) => ({ r with polling_interval_seconds: int(v: r.elapsed) }))\n  |> keep(columns: [\"polling_interval_seconds\"])",
         "description": "in seconds",
         "hide": 2,
@@ -4647,6 +5368,5 @@
   "timezone": "browser",
   "title": "PeaNUT Grafana",
   "uid": "eejn26lm3y03kf",
-  "version": 4,
-  "weekStart": ""
+  "version": 9
 }
