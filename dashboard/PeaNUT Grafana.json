@@ -740,7 +740,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 2,
         "x": 14,
         "y": 7
@@ -806,7 +806,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 2,
         "x": 16,
         "y": 7
@@ -1032,7 +1032,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 6,
         "x": 18,
         "y": 9
@@ -1058,7 +1058,7 @@
             "type": "influxdb",
             "uid": "behr9p073lybkb"
           },
-          "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last Outage: \",\n    string2: \" (\",\n    string3: \" seconds), Reason: \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
+          "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last: \",\n    string2: \" (\",\n    string3: \" seconds): \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
           "refId": "A"
         }
       ],
@@ -1350,7 +1350,7 @@
         "h": 7,
         "w": 10,
         "x": 14,
-        "y": 12
+        "y": 11
       },
       "id": 44,
       "options": {
@@ -1670,7 +1670,7 @@
         "h": 7,
         "w": 10,
         "x": 14,
-        "y": 19
+        "y": 18
       },
       "id": 57,
       "options": {
@@ -1747,7 +1747,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 25
       },
       "id": 48,
       "panels": [
@@ -2290,7 +2290,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 26
       },
       "id": 43,
       "panels": [
@@ -2833,7 +2833,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 27
       },
       "id": 28,
       "panels": [
@@ -3337,7 +3337,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 28
       },
       "id": 38,
       "panels": [
@@ -3837,7 +3837,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 29
       },
       "id": 54,
       "panels": [
@@ -4531,7 +4531,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 30
       },
       "id": 46,
       "panels": [
@@ -4671,7 +4671,7 @@
             "h": 7,
             "w": 10,
             "x": 0,
-            "y": 32
+            "y": 31
           },
           "id": 58,
           "options": {
@@ -4760,7 +4760,7 @@
             "h": 3,
             "w": 7,
             "x": 17,
-            "y": 32
+            "y": 31
           },
           "hideTimeOverride": true,
           "id": 60,
@@ -4830,10 +4830,10 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 3,
+            "h": 2,
             "w": 6,
             "x": 18,
-            "y": 35
+            "y": 34
           },
           "hideTimeOverride": true,
           "id": 71,
@@ -4856,7 +4856,7 @@
                 "type": "influxdb",
                 "uid": "behr9p073lybkb"
               },
-              "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last Outage: \",\n    string2: \" (\",\n    string3: \" seconds), Reason: \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
+              "query": "import \"date\"\nimport \"timezone\"\nimport \"experimental\"\n\noption location = timezone.location(name: \"${__timezone}\")\n\npolling_interval_s = int(v: \"${polling_interval}\")\nbuffer_s = 5\nmax_gap_s = polling_interval_s + buffer_s\npolling_interval_ns = uint(v: polling_interval_s) * uint(v: 1000000000)\none_day_ns = uint(v: 86400000000000)\nnow_local = date.truncate(t: now(), unit: 1d, location: location)\nstart_7d = time(v: uint(v: now_local) - (one_day_ns * uint(v: 6))) \nstop_time = date.add(d: duration(v: one_day_ns), to: now_local)\n\n// Base data: get both ups.status and input.transfer.reason together\nbase = from(bucket: \"${bucket}\")\n  |> range(start: start_7d, stop: stop_time)\n  |> filter(fn: (r) =>\n    r._measurement == \"${device}\" and\n    (r._field == \"ups.status\" or r._field == \"input.transfer.reason\")\n  )\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"ups.status\"] == \"OB DISCHRG\")\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"ups.status\", \"input.transfer.reason\"])\n\n// with_elapsed: calculate elapsed time and mark new outages, keep transfer_reason\nwith_elapsed = base\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: int(v: r.elapsed),\n    is_new_outage: if int(v: r.elapsed) > max_gap_s then 1.0 else 0.0\n  }))\n\n// first outage record, initialize fields with transfer_reason\nfirst = base\n  |> limit(n: 1)\n  |> map(fn: (r) => ({\n    _time: r._time,\n    ups_status: r[\"ups.status\"],\n    transfer_reason: r[\"input.transfer.reason\"],\n    gap_sec: -1,\n    is_new_outage: 1.0\n  }))\n\noutages = union(tables: [first, with_elapsed])\n  |> sort(columns: [\"_time\"])\n  |> group(columns: [])\n\n// cumulative sum to create event ids\nwith_event_id = outages\n  |> cumulativeSum(columns: [\"is_new_outage\"])\n  |> rename(columns: {is_new_outage: \"event_id\"})\n\n// Aggregate start/end times and pick transfer_reason from first event record\nevent_agg = with_event_id\n  |> group(columns: [\"event_id\"])\n  |> reduce(\n    identity: {\n      event_start: time(v: uint(v: 9223372036854775807)),\n      event_end: time(v: 0),\n      transfer_reason: \"\"\n    },\n    fn: (r, accumulator) => ({\n      event_start: if r._time < accumulator.event_start then r._time else accumulator.event_start,\n      event_end: if r._time > accumulator.event_end then r._time else accumulator.event_end,\n      // update transfer_reason only if this record is earlier than stored event_start and transfer_reason exists\n      transfer_reason: if r._time < accumulator.event_start and exists r.transfer_reason and r.transfer_reason != \"\" then r.transfer_reason else accumulator.transfer_reason\n    })\n  )\n  |> map(fn: (r) => ({\n    string1: \"Last: \",\n    string2: \" (\",\n    string3: \" seconds): \",\n    event_start: r.event_start,\n    duration: float(\n      v: uint(v: experimental.addDuration(to: r.event_end, d: duration(v: polling_interval_ns))) - uint(v: r.event_start)\n    ) / 1000000000.0,\n    transfer_reason: r.transfer_reason\n  }))\n  |> sort(columns: [\"event_start\"], desc: true)\n  |> limit(n: 1)\n\n// Yield with reason included\nevent_agg\n  |> yield(name: \"OB_Discharge_Outage_Events_With_Reason\")",
               "refId": "A"
             }
           ],
@@ -5021,7 +5021,7 @@
             "h": 2,
             "w": 10,
             "x": 14,
-            "y": 38
+            "y": 36
           },
           "id": 31,
           "options": {
@@ -5047,7 +5047,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 31
       },
       "id": 9,
       "panels": [],
@@ -5091,7 +5091,7 @@
         "h": 15,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 32
       },
       "id": 1,
       "options": {
@@ -5368,5 +5368,5 @@
   "timezone": "browser",
   "title": "PeaNUT Grafana",
   "uid": "eejn26lm3y03kf",
-  "version": 9
+  "version": 10
 }
