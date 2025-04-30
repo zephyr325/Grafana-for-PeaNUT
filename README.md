@@ -5,14 +5,17 @@ This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/P
 
 ## Features
 
-* Multiple types of pre-built Grafana panels representing a variety of metrics including base UPS operations, output power, power costs, and other miscellanous information
-* Week, month, and annual aggregations using hourly integral metrics to increase precision
-* Timezone-aware queries (automatically set to the browser's timezone) ensuring that the default Influx UTC-based time data reflects the local time when aggregating data
-* Multiple methods to show recent outage information
-* Automatic implementation of power output measurement through the ups load percent (more commonly available, but less precise) while also providing a single-click change to actual power output (less commonly available, but more precise)
-* Other inputs and overrides include cost/kWh and actual maximum load wattage
-* Queries have been optimized to reduce load/refresh times, and uses template variables for static or rarely-changing values
-* PeaNUT is based on the industry-standard [Network UPS Tools (NUT)](https://networkupstools.org/) - all database fields reflect that standard 
+* **Multiple types of pre-built Grafana panels** with a variety of metrics including base UPS statistics, power costs, previous outage tracking, multiple style choices, and other miscellaneous information. All are arranged in rows for drag-and-drop convenience. 
+
+* **Week, month, and annual aggregations** using hourly integral metrics to increase precision
+
+* **Timezone-aware queries** (automatically set to the browser's timezone) ensuring that the default Influx UTC-based time data reflects the local time when aggregating data
+
+* **Flexible power output reporting** - Automatically uses the ups load percent (more commonly available, but less precise) for output power readings, but a single-click change to realpower output (less commonly available, but more precise) changes all the panels
+
+* **Queries have been optimized** to reduce load/refresh times, and it uses template variables for static or rarely-changing values
+
+* **Queries are also published separately** - if you want to add the data to your existing dashboard, you don't have to dig through a Grafana JSON files to try to find them. Also, all metrics maintain the NUT naming standard for portability.
 
 ### Pre-Built Panels
 ![](/images/power_costs_only.png)
