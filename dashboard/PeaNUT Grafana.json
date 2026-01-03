@@ -408,10 +408,10 @@
         {
           "id": "filterFieldsByName",
           "options": {
+            "byVariable": false,
             "include": {
-              "names": [
-                "ups.status ZOX1 BACK-UPS XS 1500M"
-              ]
+              "names": [],
+              "pattern": "ups.status.*"
             }
           }
         }
