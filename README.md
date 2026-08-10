@@ -1,3 +1,6 @@
+
+</think>
+
 # Grafana-for-PeaNUT
 This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/PeaNUT) native capability to push UPS statistics to an InfluxDB v 2.x database while providing functioning panels to create your own personal dashboard.  
 
@@ -15,7 +18,7 @@ This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/P
 
 * **Queries have been optimized** to reduce load/refresh times, and it uses template variables for static or rarely-changing values
 
-* **Queries are also published separately** - if you want to add the data to your existing dashboard, you don't have to dig through a Grafana JSON files to try to find them. Also, all metrics maintain the NUT naming standard for portability.
+* **Queries are also published separately** - if you want to add the data to your existing dashboard, you don't have to dig through Grafana JSON files to try to find them. Also, all metrics maintain the NUT naming standard for portability.
 
 ### Pre-Built Panels
 ![](/images/power_costs_only.png)
@@ -37,7 +40,7 @@ This is a Grafana dashboard extending [PeaNUT's](https://github.com/Brandawg93/P
 5. Select your InfluxDB database, and click "Import"
 
 ### Customizing Your Dashboard
-Dashboards tend to be driven by your personal preferences of both functionality and style; this dashboard has pre-built panels for a range of information and styles to choose from.  Implementing this is fairly straightfoward:
+Dashboards tend to be driven by your personal preferences of both functionality and style; this dashboard has pre-built panels for a range of information and styles to choose from.  Implementing this is fairly straightforward:
 
 * The top area already includes a few dashboard panels.
 * All the template panels are in the rows below that area.  After clicking the "Edit" button (top right of the page), either just drag the panels you want to the top, or you can duplicate a panel (top right 3 dots --> More --> Duplicate) and move that to the top.
